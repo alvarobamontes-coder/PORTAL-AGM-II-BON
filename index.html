@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal 21ª Compañía - AGM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+    .agm-header { background: linear-gradient(135deg, #1b2e1e 0%, #2d4731 100%); border-bottom: 4px solid #c59b27; }
+    .tab-active { background-color: #1b2e1e; color: #ffffff; border-color: #c59b27; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-gray-800">
+
+  <!-- CABECERA ESTILO PORTAL AGM -->
+  <header class="agm-header text-white shadow-md">
+    <div class="max-w-6xl mx-auto px-4 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-full bg-[#c59b27] text-[#1b2e1e] font-black flex items-center justify-center text-lg shadow">
+          21ª
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-wide uppercase">Portal 21ª Compañía</h1>
+          <p class="text-xs text-gray-300 uppercase tracking-wider">Academia General Militar · Control de Comidas y Pernoctas</p>
+        </div>
+      </div>
+      <div class="text-xs bg-black/25 px-3 py-1.5 rounded border border-white/15">
+        Estado: <span id="statusBadge" class="font-semibold text-emerald-300">Listo</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl w-full mx-auto px-4 py-6 space-y-6 flex-1">
+
+    <!-- BLOQUE 1: SUBIDA DE PDF AL AUTOMATISMO -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-bold text-[#1b2e1e] uppercase">Subir Parte en PDF</h2>
+          <p class="text-sm text-gray-500">Selecciona el archivo PDF; GPT-4o extraerá los cadetes y actualizará las listas automáticamente.</p>
+        </div>
+        <form id="uploadForm" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <input type="file" id="pdfInput" accept="application/pdf" required
+            class="text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-[#1b2e1e] hover:file:bg-gray-200 cursor-pointer border border-gray-300 rounded-lg p-1" />
+          <button type="submit" id="submitBtn"
+            class="bg-[#1b2e1e] hover:bg-[#2a452e] text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition shadow-sm whitespace-nowrap">
+            Procesar PDF
+          </button>
+        </form>
+      </div>
+      <p id="uploadMsg" class="text-sm mt-3 hidden font-medium"></p>
+    </section>
+
+    <!-- BLOQUE 2: FILTROS Y PESTAÑAS DE SERVICIO -->
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-5">
+      
+      <!-- Pestañas de Servicio -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <button onclick="cambiarServicio('DESAYUNO')" id="tab-DESAYUNO" class="tab-btn tab-active border-2 py-2.5 px-3 rounded-lg font-bold text-sm transition">
+          DESAYUNO <span id="count-DESAYUNO" class="ml-1 text-xs opacity-80">(0)</span>
+        </button>
+        <button onclick="cambiarServicio('COMIDA')" id="tab-COMIDA" class="tab-btn border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 py-2.5 px-3 rounded-lg font-bold text-sm transition">
+          COMIDA <span id="count-COMIDA" class="ml-1 text-xs opacity-80">(0)</span>
+        </button>
+        <button onclick="cambiarServicio('CENA')" id="tab-CENA" class="tab-btn border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 py-2.5 px-3 rounded-lg font-bold text-sm transition">
+          CENA <span id="count-CENA" class="ml-1 text-xs opacity-80">(0)</span>
+        </button>
+        <button onclick="cambiarServicio('PERNOCTA')" id="tab-PERNOCTA" class="tab-btn border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 py-2.5 px-3 rounded-lg font-bold text-sm transition">
+          PERNOCTA <span id="count-PERNOCTA" class="ml-1 text-xs opacity-80">(0)</span>
+        </button>
+      </div>
+
+      <!-- Filtros por Sección, Día y Buscador -->
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-gray-100">
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Sección</label>
+          <select id="filtroSeccion" onchange="renderizar()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="">Todas las secciones</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Día</label>
+          <select id="filtroDia" onchange="renderizar()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+            <option value="">Todos los días</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Buscar Cadete</label>
+          <div class="flex gap-2">
+            <input type="text" id="buscadorCadete" oninput="renderizar()" placeholder="Apellidos o nombre..."
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            <button onclick="cargarDatos()" title="Actualizar datos"
+              class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-semibold text-gray-700 border border-gray-300">
+              ↻
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cuadrícula de Tarjetas de Cadetes -->
+      <div id="gridCadetes" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+        <!-- Se rellena automáticamente -->
+      </div>
+
+      <div id="emptyState" class="hidden text-center py-10 text-gray-400 text-sm">
+        No hay registros para este servicio o filtro seleccionado.
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="text-center text-xs text-gray-400 py-4">
+    21ª Compañía · Academia General Militar
+  </footer>
+
+  <script>
+    // ==========================================
+    // 1. PEGA AQUÍ TUS DOS ENLACES:
+    // ==========================================
+    const WEBHOOK_URL = "PEGA_AQUI_TU_URL_DE_MAKE_WEBHOOK";
+    const SHEET_CSV_URL = "PEGA_AQUI_TU_ENLACE_CSV_DE_GOOGLE_SHEETS";
+
+    let registros = [];
+    let servicioActual = "DESAYUNO";
+
+    // Enviar PDF a Make.com
+    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById("pdfInput");
+      const btn = document.getElementById("submitBtn");
+      const msg = document.getElementById("uploadMsg");
+
+      if (!fileInput.files.length) return;
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      btn.disabled = true;
+      btn.textContent = "Enviando a IA...";
+      msg.className = "text-sm mt-3 font-medium text-blue-600";
+      msg.textContent = "Subiendo PDF y extrayendo datos con GPT-4o...";
+      msg.classList.remove("hidden");
+
+      try {
+        const res = await fetch(WEBHOOK_URL, { method: "POST", body: formData });
+        if (!res.ok) throw new Error("Error en el envío");
+
+        msg.className = "text-sm mt-3 font-medium text-emerald-700";
+        msg.textContent = "PDF procesado correctamente. Actualizando listado...";
+        fileInput.value = "";
+        setTimeout(cargarDatos, 3000);
+      } catch (err) {
+        msg.className = "text-sm mt-3 font-medium text-red-600";
+        msg.textContent = "Error al conectar con Make. Revisa que el escenario esté activo (ON).";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Procesar PDF";
+      }
+    });
+
+    // Leer datos desde Google Sheets (CSV público)
+    function cargarDatos() {
+      if (SHEET_CSV_URL.includes("PEGA_AQUI")) return;
+      document.getElementById("statusBadge").textContent = "Actualizando...";
+
+      Papa.parse(SHEET_CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          registros = results.data.map(r => ({
+            cadete: (r.Cadete || r.CADETE || "").trim(),
+            seccion: (r.Seccion || r.SECCION || r["Sección"] || "").trim(),
+            dia: (r.Dia || r.DIA || r["Día"] || "").trim(),
+            servicio: (r.Tipo_Servicio || r.TIPO_SERVICIO || "").trim().toUpperCase(),
+            pdf: (r.PDF || "").trim()
+          })).filter(r => r.cadete !== "");
+
+          actualizarDesplegables();
+          renderizar();
+          document.getElementById("statusBadge").textContent = "Conectado";
+        }
+      });
+    }
+
+    function actualizarDesplegables() {
+      const secciones = [...new Set(registros.map(r => r.seccion).filter(Boolean))].sort();
+      const dias = [...new Set(registros.map(r => r.dia).filter(Boolean))].sort();
+
+      const selSec = document.getElementById("filtroSeccion");
+      const valSec = selSec.value;
+      selSec.innerHTML = '<option value="">Todas las secciones</option>' +
+        secciones.map(s => `<option value="${s}">${s}</option>`).join("");
+      selSec.value = valSec;
+
+      const selDia = document.getElementById("filtroDia");
+      const valDia = selDia.value;
+      selDia.innerHTML = '<option value="">Todos los días</option>' +
+        dias.map(d => `<option value="${d}">${d}</option>`).join("");
+      selDia.value = valDia;
+    }
+
+    function cambiarServicio(servicio) {
+      servicioActual = servicio;
+      document.querySelectorAll(".tab-btn").forEach(b => {
+        b.classList.remove("tab-active");
+        b.classList.add("border-gray-200", "bg-gray-50");
+      });
+      const activa = document.getElementById("tab-" + servicio);
+      activa.classList.add("tab-active");
+      activa.classList.remove("border-gray-200", "bg-gray-50");
+      renderizar();
+    }
+
+    function renderizar() {
+      const sec = document.getElementById("filtroSeccion").value;
+      const dia = document.getElementById("filtroDia").value;
+      const texto = document.getElementById("buscadorCadete").value.toLowerCase();
+
+      // Contadores por pestaña respetando filtro de sección y día
+      ["DESAYUNO", "COMIDA", "CENA", "PERNOCTA"].forEach(srv => {
+        const total = registros.filter(r =>
+          r.servicio === srv &&
+          (!sec || r.seccion === sec) &&
+          (!dia || r.dia === dia)
+        ).length;
+        document.getElementById("count-" + srv).textContent = `(${total})`;
+      });
+
+      const filtrados = registros.filter(r =>
+        r.servicio === servicioActual &&
+        (!sec || r.seccion === sec) &&
+        (!dia || r.dia === dia) &&
+        (!texto || r.cadete.toLowerCase().includes(texto))
+      );
+
+      const grid = document.getElementById("gridCadetes");
+      const empty = document.getElementById("emptyState");
+
+      if (filtrados.length === 0) {
+        grid.innerHTML = "";
+        empty.classList.remove("hidden");
+        return;
+      }
+
+      empty.classList.add("hidden");
+      grid.innerHTML = filtrados.map(r => `
+        <div class="border border-gray-200 rounded-lg p-3.5 bg-gray-50/60 hover:border-[#c59b27] transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-[#1b2e1e] text-white">
+                ${r.seccion || "Sin sección"}
+              </span>
+              <span class="text-xs font-semibold text-gray-500">${r.dia || "-"}</span>
+            </div>
+            <p class="font-bold text-gray-900 text-sm mt-1.5">${r.cadete}</p>
+          </div>
+          ${r.pdf ? `<a href="${r.pdf}" target="_blank" class="text-xs text-[#2d4731] underline mt-2 inline-block">Ver PDF origen</a>` : ""}
+        </div>
+      `).join("");
+    }
+
+    cargarDatos();
+  </script>
+</body>
+</html>
